@@ -1,14 +1,13 @@
 <template>
   <div class="wrap">
-    <div class="shaft">
-      <div class="elevator">
-        <template v-if="this.elevators.direction === 'up'">⭡</template>
-        <template v-if="this.elevators.direction === 'down'">⭣</template>
-        {{ this.elevators[0].floor }}
-      </div>
+    <div v-for="elevator in elevators" :key="elevator.id" class="shaft" :style="{ height: `${heightShaft}px` }">
+      <Elevator :elevator="elevator" :time="time" />
     </div>
+
     <div class="buttons">
-      <button @click="elevatorCall(floor)" class="button" v-for=" floor  in  floors " :key="floor">
+      <button v-for="floor in floors " :key="floor"
+        :class="['button', { 'wait': this.elevators.some((item) => item.inProgress === floor || this.callList.includes(floor)) },]"
+        @click="elevatorCall(floor)">
         {{ floor }}
       </button>
     </div>
@@ -16,20 +15,60 @@
 </template>
 
 <script>
+import Elevator from './components/Elevator.vue';
 
 export default {
   name: 'App',
+
+  components: {
+    Elevator
+  },
+
   data() {
     return {
       floors: 5,
       floor: 1,
       callList: [],
       time: 0,
+      firstTimeOut: null,
+      secondTimeOut: null,
       elevators: [
         { id: 1, floor: 1, isFree: true, direction: "none", inProgress: 'none' },
       ],
     }
   },
+
+  mounted() {
+    const elevatorInfoJson = localStorage.getItem('elevatorInfo');
+
+    if (elevatorInfoJson) {
+      const { callList, elevators } = JSON.parse(elevatorInfoJson);
+
+      this.callList = callList;
+      this.elevators = elevators;
+    }
+    this.resetElevator()
+  },
+
+  computed: {
+    heightShaft() {
+      return this.floors * 100
+    },
+
+    delay() {
+      return this.time + 3000
+    }
+  },
+
+  watch: {
+    callList: {
+      handler() {
+        this.startElevator();
+      },
+      deep: true
+    }
+  },
+
   methods: {
     setDirection(floor, id) {
       if (this.elevators[id].floor > floor) {
@@ -51,7 +90,51 @@ export default {
       this.callList.push(floor)
     },
 
+    selectElevator(floor) {
+      return this.elevators
+        .filter(item => item.isFree)
+        .map(item => ({ id: item.id, floor: Math.abs(item.floor - floor) }))
+        .sort((a, b) => a.floor - b.floor)[0].id
+    },
+
+    calcTime(id) {
+      this.time = this.floor > this.elevators[id].floor ? (this.floor - this.elevators[id].floor) * 1000 : (this.elevators[id].floor - this.floor) * 1000
+    },
+    resetElevator() {
+      this.elevators = this.elevators.map((item) => { return { id: item.id, floor: item.floor, isFree: true, direction: 'none', inProgress: 'none' } })
+    },
+
+    startElevator() {
+      if (this.callList.length && this.elevators.some(item => item.isFree === true)) {
+        this.floor = this.callList.shift()
+        const id = (this.selectElevator(this.floor) - 1)
+        this.elevators[id].isFree = false
+        this.calcTime(id);
+        this.elevators[id].inProgress = this.floor
+        this.setDirection(this.floor, id)
+        this.elevators[id].floor = this.floor
+        this.firstTimeOut = setTimeout(() => {
+          this.elevators[id].inProgress = 'none'
+          this.elevators[id].direction = 'none'
+        }, this.time)
+
+        this.secondTimeOut = setTimeout(() => {
+          this.elevators[id].isFree = true
+          localStorage.setItem('elevatorInfo', JSON.stringify({
+            elevators: this.elevators,
+            callList: this.callList,
+          }));
+          this.startElevator()
+        }, this.delay)
+
+      }
+    },
   },
+
+  unmounted() {
+    clearTimeout(this.firstTimeOut)
+    clearTimeout(this.secondTimeOut)
+  }
 }
 </script>
 
@@ -76,6 +159,15 @@ export default {
   padding: 18px;
   border-radius: 50%;
   border: 1px solid #111;
+  cursor: pointer;
+}
+
+.wait {
+  background-color: tomato;
+}
+
+.inProgress {
+  background-color: rgb(253, 132, 40);
 }
 
 .elevator {
@@ -91,9 +183,21 @@ export default {
 .shaft {
   display: flex;
   align-items: end;
+  margin: 10px;
   width: 90px;
   height: 500px;
   border: 1px solid #111;
-  margin: 10px;
+}
+
+@keyframes smoothBlink {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0;
+  }
 }
 </style>
