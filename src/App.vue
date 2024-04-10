@@ -2,10 +2,13 @@
   <div class="wrap">
     <div class="shaft">
       <div class="elevator">
+        <template v-if="this.elevators.direction === 'up'">⭡</template>
+        <template v-if="this.elevators.direction === 'down'">⭣</template>
+        {{ this.elevators[0].floor }}
       </div>
     </div>
     <div class="buttons">
-      <button class="button" v-for=" floor  in  floors " :key="floor">
+      <button @click="elevatorCall(floor)" class="button" v-for=" floor  in  floors " :key="floor">
         {{ floor }}
       </button>
     </div>
@@ -22,12 +25,32 @@ export default {
       floor: 1,
       callList: [],
       time: 0,
-      firstTimeOut: null,
-      secondTimeOut: null,
       elevators: [
         { id: 1, floor: 1, isFree: true, direction: "none", inProgress: 'none' },
       ],
     }
+  },
+  methods: {
+    setDirection(floor, id) {
+      if (this.elevators[id].floor > floor) {
+        this.elevators[id].direction = 'down'
+      } else {
+        this.elevators[id].direction = 'up'
+      }
+    },
+
+    elevatorCall(floor) {
+      if (this.elevators.some((item => item.floor === floor))) {
+        return false;
+      }
+
+      if (this.callList.includes(floor)) {
+        return false;
+      }
+
+      this.callList.push(floor)
+    },
+
   },
 }
 </script>
@@ -53,7 +76,6 @@ export default {
   padding: 18px;
   border-radius: 50%;
   border: 1px solid #111;
-  /* cursor: pointer; */
 }
 
 .elevator {
