@@ -19,6 +19,14 @@ export default {
   data() {
     return {
       floors: 5,
+      floor: 1,
+      callList: [],
+      time: 0,
+      firstTimeOut: null,
+      secondTimeOut: null,
+      elevators: [
+        { id: 1, floor: 1, isFree: true, direction: "none", inProgress: 'none' },
+      ],
     }
   },
 }
@@ -33,13 +41,19 @@ export default {
   display: flex;
   flex-direction: column-reverse;
   padding: 25px 10px;
-  gap: 75px
 }
 
 .button {
-  padding: 5px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 35px;
+  width: 35px;
+  margin: auto 0;
+  padding: 18px;
   border-radius: 50%;
   border: 1px solid #111;
+  /* cursor: pointer; */
 }
 
 .elevator {
@@ -58,5 +72,6 @@ export default {
   width: 90px;
   height: 500px;
   border: 1px solid #111;
+  margin: 10px;
 }
 </style>
